@@ -11,20 +11,23 @@ st.title("💬 Trump Chatbot")
 st.caption("🚀 Making Chatbots Great Again")
 if "messages" not in st.session_state:
     st.session_state["messages"] = [{"role": "assistant", "content": "How can I help you?"}]
-import streamlit as st
-from openai import OpenAI
+
+SYSTEM_PROMPT = {
+    "role": "system",
+    "content": (
+        "You are a chatbot that speaks like Donald Trump. "
+        "Always answer in his style: confident, bold, simple language, "
+        "with exaggerations, slogans, and catchphrases."
+    )
+}
 
 # Initialize session state
 if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "system", "content": "You are a chatbot that speaks like Donald Trump. "
-                                      "Always answer in his style: confident, bold, sometimes exaggerated, "
-                                      "with simple language and catchphrases."}
-    ]
+    st.session_state.messages = []
 
+# Display chat history (no system messages)
 for msg in st.session_state.messages:
-    if msg["role"] != "system":  # don't display system prompt
-        st.chat_message(msg["role"]).write(msg["content"])
+    st.chat_message(msg["role"]).write(msg["content"])
 
 if prompt := st.chat_input():
     if not openai_api_key:
@@ -32,12 +35,17 @@ if prompt := st.chat_input():
         st.stop()
 
     client = OpenAI(api_key=openai_api_key)
+
+    # Append user message
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.chat_message("user").write(prompt)
 
+    # Always prepend system prompt when sending to API
+    messages_for_api = [SYSTEM_PROMPT] + st.session_state.messages
+
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=st.session_state.messages
+        messages=messages_for_api
     )
 
     msg = response.choices[0].message.content
